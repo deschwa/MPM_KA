@@ -43,16 +43,20 @@ Grid(args...) = Grid(Array, args...)
 
 
 
-@kernel function reset_grid_kernel!(grid_state)
-    I = @index(Global, Cartesian)
-    grid_state[I] = zero(eltype(grid_state))
-end
+
 
 function reset_grid!(grid::Grid)
-    backend = KernelAbstractions.get_backend(grid.state)
-    kernel = reset_grid_kernel!(backend)
-    kernel(grid.state, ndrange=size(grid.state))
-    KernelAbstractions.synchronize(backend)
+    T = eltype(grid.state.m)
+    fill!(grid.state.m, zero(T))
+    fill!(grid.state.p.x, zero(T))
+    fill!(grid.state.p.y, zero(T))
+    fill!(grid.state.p.z, zero(T))
+    fill!(grid.state.p_new.x, zero(T))
+    fill!(grid.state.p_new.y, zero(T))
+    fill!(grid.state.p_new.z, zero(T))
+    fill!(grid.state.f.x, zero(T))
+    fill!(grid.state.f.y, zero(T))
+    fill!(grid.state.f.z, zero(T))
 end
 
 function Base.zero(::Type{GridNode{T}}) where {T}

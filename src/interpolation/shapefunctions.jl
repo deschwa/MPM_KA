@@ -17,7 +17,7 @@ end
     
 
 
-@inline function shape_function(natural_coords::SVector{3, T}, inv_spacings::SVector{3, T}) where {T}
+@inline function shape_function(natural_coords::SVector{3, T}, inv_spacings::SVector{3, T})::NTuple{4, T} where {T}
     Nx = max(one(T) - abs(natural_coords[1]), zero(T))
     Ny = max(one(T) - abs(natural_coords[2]), zero(T))
     Nz = max(one(T) - abs(natural_coords[3]), zero(T))

@@ -4,7 +4,7 @@
 @kernel function stress_update_kernel!(material::RigidSolid, mps, dt::T) where {T}
     p_idx = @index(Global, Linear)
 
-    mps.σ[p_idx] = zero(SMatrix{3,3,T})
+    mps.σ[p_idx] = zero(SMatrix{3,3,T,9})
 end
 
 function soundspeed(material::RigidSolid)
@@ -15,19 +15,28 @@ end
 # --------------------
 # Neo-Hookean Material
 # --------------------
-@kernel function stress_update_kernel!(material::NeoHookean{T}, mps, dt::T) where {T}
+@kernel function stress_update_kernel!(material::NeoHookean{T}, mps::StructVector{MP}, dt::T) where {T, MP<:MaterialPoint{T}}
     p_idx = @index(Global, Linear)
-
-    F_p = mps.F[p_idx]
-    J = det(F_p)
-    J = max(J, epsilon(T))
-
-    λ = material.λ
-    μ = material.μ
-
-    σ_new = (μ / J) * (F_p * transpose(F_p) - I_3(T)) + (λ * log(J) / J) * I_3(T)    
+    
+    # Direct column access is safe and fast
+    F = mps.F[p_idx]
+    
+    σ_new = barrier_neohookean(F, material.λ, material.μ)::SMatrix{3,3,T,9}
 
     mps.σ[p_idx] = σ_new
+end
+
+@inline function barrier_neohookean(F::SMatrix{3,3,T,9}, λ::T, μ::T)::SMatrix{3,3,T,9} where {T}
+    J = det(F)
+    J = max(J, epsilon(T))
+    
+    # Force the math to stay in SMatrix world
+    # (F * F') is usually safe, but let's be 100% explicit
+    FFt = F * F' 
+
+    σ_new = (μ / J) * (FFt - I_3(T)) + (λ * log(J) / J) * I_3(T)
+    
+    return σ_new
 end
 
 function soundspeed(material::NeoHookean{T}) where {T}

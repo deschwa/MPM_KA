@@ -8,18 +8,18 @@ struct MaterialPoint{T, MaterialCache}
 
     m::T                      # Mass
     volume_0::T               # Volume
-    F::SMatrix{3,3,T}         # Deformation Gradient
-    σ::SMatrix{3,3,T}         # Cauchy Stress
-    L::SMatrix{3,3,T}         # Velocity Gradient/Affine Matrix
+    F::SMatrix{3,3,T,9}         # Deformation Gradient
+    σ::SMatrix{3,3,T,9}         # Cauchy Stress
+    L::SMatrix{3,3,T,9}         # Velocity Gradient/Affine Matrix
 
     mat_cache::MaterialCache      # Cache for additional data (eg damage, ...)
 end
 
 function MaterialPoint(x::SVector{3, T}, v::SVector{3, T}, a_ext::SVector{3, T}, 
                         m::T, volume::T, material_cache::matcache) where {T, matcache<:AbstractMaterialCache}
-    F = SMatrix{3,3,T}(I)
-    σ = zero(SMatrix{3,3,T})
-    L = zero(SMatrix{3,3,T})
+    F = SMatrix{3,3,T,9}(I)
+    σ = zero(SMatrix{3,3,T,9})
+    L = zero(SMatrix{3,3,T,9})
     return MaterialPoint(x, v, a_ext, m, volume, F, σ, L, material_cache)
 end
 

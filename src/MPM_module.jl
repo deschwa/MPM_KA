@@ -51,4 +51,8 @@ export timestep!, p2g!, p2g_kernel!, g2p!, g2p_kernel!, grid_update!, grid_updat
 export p2g_barrier!
 
 
+include("benchmark_utils/generate_test_setups.jl")
+export random_particle_sim, get_quantities
+
+
 end # Nodule MPM

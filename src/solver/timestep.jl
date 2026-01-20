@@ -111,24 +111,24 @@ function p2g!(mp_group::MaterialPointGroup, grid::Grid, shapefunction=LinearHat(
 end # p2g! function
 
 # Particles to Grid kernel function
-@kernel function p2g_kernel!(grid_state, mps, 
+@kernel function p2g_kernel!(grid_state, mps::StructVector{MP}, 
                             inv_spacings::SVector{3,T}, min_coords::SVector{3,T}, ghost_width::Int,
-                            shapefunction::AbstractShapeFunction) where {T}
+                            shapefunction::SF) where {T, MP<:MaterialPoint{T}, SF<:AbstractShapeFunction}
 
     # Thread index
     p_idx = @index(Global, Linear)
     # p_idx = 
 
     # extract mp
-    mp = mps[p_idx]
-    m_p = mp.m
-    x_p = mp.x::SVector{3,T}
-    v_p = mp.v::SVector{3,T}
-    a_ext_p = mp.a_ext::SVector{3,T}
-    L_p = mp.L::SMatrix{3,3,T}
-    F_p = mp.F::SMatrix{3,3,T}
-    V0_p = mp.volume_0::T
-    σ_p = mp.σ::SMatrix{3,3,T}
+    # mp = mps[p_idx]
+    m_p = mps.m[p_idx]
+    x_p = mps.x[p_idx]::SVector{3,T}
+    v_p = mps.v[p_idx]::SVector{3,T}
+    a_ext_p = mps.a_ext[p_idx]::SVector{3,T}
+    L_p = mps.L[p_idx]::SMatrix{3,3,T,9}
+    F_p = mps.F[p_idx]::SMatrix{3,3,T,9}
+    V0_p = mps.volume_0[p_idx]::T
+    σ_p = mps.σ[p_idx]::SMatrix{3,3,T,9}
 
 
     p2g_barrier!(grid_state, inv_spacings, min_coords, ghost_width,
@@ -139,8 +139,8 @@ end
 
 @inline function p2g_barrier!(grid_state, inv_spacings::SVector{3,T}, min_coords::SVector{3,T}, ghost_width::Int,
                             shapefunction::SF,
-                            m_p::T, x_p::SVector{3,T}, v_p::SVector{3,T}, a_ext_p::SVector{3,T}, L_p::SMatrix{3,3,T}, F_p::SMatrix{3,3,T},
-                            V0_p::T, σ_p::SMatrix{3,3,T}) where {T, SF<:AbstractShapeFunction}
+                            m_p::T, x_p::SVector{3,T}, v_p::SVector{3,T}, a_ext_p::SVector{3,T}, L_p::SMatrix{3,3,T,9}, F_p::SMatrix{3,3,T,9},
+                            V0_p::T, σ_p::SMatrix{3,3,T,9}) where {T, SF<:AbstractShapeFunction}
     J = LinearAlgebra.det(F_p)
 
     grid_position = get_grid_position(x_p, inv_spacings, min_coords, ghost_width)
@@ -235,10 +235,10 @@ function g2p!(mp_group::MaterialPointGroup, grid::Grid, α::T, dt::T, shapefunct
 end
 
 # Grid to Particles kernel function
-@kernel function g2p_kernel!(grid_state, mps,
+@kernel function g2p_kernel!(grid_state, mps::StructVector{MP},
                             inv_spacings::SVector{3,T}, min_coords::SVector{3,T}, ghost_width::Int,
                             α::T, dt::T,
-                            shapefunction::AbstractShapeFunction) where {T}
+                            shapefunction::AbstractShapeFunction) where {T, MP<:MaterialPoint{T}}
 
     # Thread index
     p_idx = @index(Global, Linear)
@@ -252,7 +252,7 @@ end
 
     v_p_apic = zero(SVector{3, T})
     v_p_flip = mp.v
-    L_p_new = zero(SMatrix{3,3,T})
+    L_p_new = zero(SMatrix{3,3,T,9})
 
     for di in i_offsets, dj in j_offsets, dk in k_offsets
         i = i_base + di
