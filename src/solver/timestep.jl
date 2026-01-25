@@ -36,12 +36,12 @@ end
 """
 Perform a single timestep of the MPM simulation
 """
-function timestep!(sim::MPMSimulation, alpha::T=1.0) where {T}
+function timestep!(sim::MPMSimulation, alpha::T=1.0, courant_factor::T=0.3) where {T}
     mp_groups = sim.mp_groups
     grid = sim.grid
     shapefunction = sim.shape_function
-    dt = sim.dt
-
+    dt = courant_cond(sim, courant_factor)
+    
     # ============
     # Reset Kernel
     # ============
@@ -153,9 +153,9 @@ end
         j = j_base + dj
         k = k_base + dk
 
-        # if !checkbounds(Bool, grid.m, i,j,k)
-        #     continue
-        # end
+        if !checkbounds(Bool, grid_state.m, i,j,k)
+            continue
+        end
 
         natural_coords = SVector(
                             grid_position[1] - i,
@@ -252,21 +252,23 @@ end
 
     v_p_apic = zero(SVector{3, T})
     v_p_flip = mp.v
-    L_p_new = zero(SMatrix{3,3,T,9})
+    B_p_new = zero(SMatrix{3,3,T,9})
 
     for di in i_offsets, dj in j_offsets, dk in k_offsets
         i = i_base + di
         j = j_base + dj
         k = k_base + dk
-        # if !checkbounds(Bool, grid.m, i,j,k)
-        #     continue
-        # end
+        if !checkbounds(Bool, grid_state.m, i,j,k)
+            continue
+        end
 
         natural_coords = SVector(
                             grid_position[1] - i,
                             grid_position[2] - j,
                             grid_position[3] - k
                         )
+
+        r_rel = - natural_coords ./ inv_spacings
 
         N = shape_function(natural_coords, inv_spacings)
         N_Ip = N[1]
@@ -280,15 +282,27 @@ end
             v_p_apic = v_p_apic + N_Ip * v_i_new
             v_p_flip = v_p_flip + N_Ip * (v_i_new - v_i)
 
-            L_p_new = L_p_new + v_i_new * ∇N_Ip'
+            B_p_new = B_p_new + update_B_matrix(N_Ip, v_i_new, r_rel)
         end
     end
     mps.v[p_idx] = (1-α) * v_p_apic + α * v_p_flip
     mps.x[p_idx] = mp.x + mps.v[p_idx] * dt
-    mps.L[p_idx] = L_p_new
-    mps.F[p_idx] = (I_3(T) + L_p_new*dt) * mp.F
+    mps.L[p_idx] = finalize_apic(shapefunction, B_p_new, inv_spacings)
+    mps.F[p_idx] = (I_3(T) + mps.L[p_idx]*dt) * mp.F
 end
 
+@inline function update_B_matrix(N_Ip::T, v_i_new::SVector{3,T}, r_rel::SVector{3,T}) where {T}
+    v_i_new * r_rel' * N_Ip
+end
+
+@inline function finalize_apic(::LinearHat, B_sum::SMatrix{3,3,T,9}, inv_spacings::SVector{3,T}) where {T}
+    D_inv = SMatrix{3,3,T,9}(
+        inv_spacings[1], zero(T), zero(T),
+        zero(T), inv_spacings[2], zero(T),
+        zero(T), zero(T), inv_spacings[3]
+    )
+    return B_sum * 4 * D_inv.^2
+end
 
 """
 Stress Update host function

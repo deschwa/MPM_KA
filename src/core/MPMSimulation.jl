@@ -10,6 +10,6 @@ mutable struct MPMSimulation{T, G<:Grid, MPG<:Tuple, SF}
     shape_function::SF
 end
 
-function MPMSimulation(mp_groups::MPG, grid::G, total_time::T, dt::T, shape::SF) where {MPG, G, T, SF}
+function MPMSimulation(mp_groups::MPG, grid::G, total_time::T, dt::T, shape::SF) where {MPG<:Tuple, G<:Grid, T<:Real, SF<:AbstractShapeFunction}
     return MPMSimulation{T, G, MPG, SF}(mp_groups, grid, dt, zero(T), total_time, shape)
 end
