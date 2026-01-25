@@ -17,7 +17,7 @@ function extract_coords(mp_group)
 end
 
 
-function plot_material_points(sim::MPMSimulation, title="", scheme=:velocity, color_limits=nothing)
+function plot_material_points(sim::MPMSimulation; title="", scheme=:velocity, color_limits=nothing)
     p = plot(layout=(1,1), size=(600,600), camera=(45, 30),
              xlabel="X", ylabel="Y", zlabel="Z", title=title)
     

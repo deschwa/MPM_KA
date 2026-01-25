@@ -55,7 +55,7 @@ material, cache = NeoHookean_E_ν(1e6, 0.3, rho)
 
 R = 0.5  # Cylinder Radius (m)
 h = 1.0  # Cylinder Height (m)
-T = 5.0  # Rotation Period (s)
+T = 2.0  # Rotation Period (s)
 angular_velocity = 2π / T
 
 # Define Simulation Domain
@@ -86,9 +86,9 @@ grid = Grid(Array, N_vec, padding, min_coords, max_coords)
 println("Grid Size: $(N_vec) nodes.")
 
 
-sim = MPMSimulation(mp_group_tuple, grid, 10.0, 1e-3, LinearHat())
+sim = MPMSimulation(mp_group_tuple, grid, 5.0, 1e-3, LinearHat())
 
-savefig(plot_material_points(sim, "Initial State"), "initial_state.png")
+savefig(plot_material_points(sim, title="Initial State", scheme=:velocity, color_limits=(-0.7, 0.7)), "initial_state.png")
 
 
 # Animation Setup
@@ -101,12 +101,12 @@ println("Starting Simulation")
 timestep!(sim, 1.0, 0.1)
 while sim.t < sim.total_time
     
+    print("Calculating time $(sim.t)       \r")
     if sim.t >= next_frame_time
-        p = plot_material_points(sim, "t=$(sim.t)")
+        p = plot_material_points(sim, title="t=$(sim.t)", scheme=:velocity, color_limits=(-0.7, 0.7))
         push!(frames, p)
         display(p)
         global next_frame_time += 1/fps
-        print("Calculating time $(sim.t)       \r")
     end
 
     timestep!(sim, 1.0, 0.4)

@@ -63,7 +63,7 @@ function timestep!(sim::MPMSimulation, alpha::T=1.0, courant_factor::T=0.3) wher
     # Grid to Particle
     # ================
     for mp_group in mp_groups
-        g2p!(mp_group, grid, 1.0, dt, shapefunction)
+        g2p!(mp_group, grid, alpha, dt, shapefunction)
     end
 
     # ==============
@@ -285,7 +285,7 @@ end
             B_p_new = B_p_new + update_B_matrix(N_Ip, v_i_new, r_rel)
         end
     end
-    mps.v[p_idx] = (1-α) * v_p_apic + α * v_p_flip
+    mps.v[p_idx] = (1-α) * v_p_flip + α * v_p_apic
     mps.x[p_idx] = mp.x + mps.v[p_idx] * dt
     mps.L[p_idx] = finalize_apic(shapefunction, B_p_new, inv_spacings)
     mps.F[p_idx] = (I_3(T) + mps.L[p_idx]*dt) * mp.F

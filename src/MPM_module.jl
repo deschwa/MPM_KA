@@ -54,7 +54,7 @@ export p2g_barrier!
 include("benchmark_utils/generate_test_setups.jl")
 export random_particle_sim, get_quantities
 
-include("plotting/plotting_utils.jl")
+include("output/plotting_utils.jl")
 export plot_material_points
 
 
