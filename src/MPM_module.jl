@@ -8,6 +8,7 @@ using KernelAbstractions
 using Adapt
 using Atomix
 using CUDA
+using Plots
 
 
 # Small Helpers used across the module
@@ -25,7 +26,7 @@ export LinearElastic, LinearElastic_E_ν, LinearElastic_λ_ν
 export NeoHookean, NeoHookean_E_ν, NeoHookean_λ_ν
 
 export AbstractMaterial, AbstractMaterialCache
-export AbstractShapeFunction, LinearHat
+export AbstractShapeFunction, LinearHat, QuadraticBSpline
 
 
 include("core/particles.jl")

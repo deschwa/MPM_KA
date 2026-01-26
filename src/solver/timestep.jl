@@ -304,6 +304,15 @@ end
     return B_sum * 4 * D_inv.^2
 end
 
+@inline function finalize_apic(::QuadraticBSpline, B_sum::SMatrix{3,3,T,9}, inv_spacings::SVector{3,T}) where {T}
+    D_inv = SMatrix{3,3,T,9}(
+        inv_spacings[1], zero(T), zero(T),
+        zero(T), inv_spacings[2], zero(T),
+        zero(T), zero(T), inv_spacings[3]
+    )
+    return B_sum * 4 * D_inv.^2
+end
+
 """
 Stress Update host function
 """

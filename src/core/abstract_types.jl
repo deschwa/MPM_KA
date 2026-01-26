@@ -70,3 +70,4 @@ Shape Function Types
 """
 abstract type AbstractShapeFunction end
 struct LinearHat <: AbstractShapeFunction end
+struct QuadraticBSpline <: AbstractShapeFunction end
