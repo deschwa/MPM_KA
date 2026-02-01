@@ -1,8 +1,3 @@
-using KernelAbstractions
-using StaticArrays
-using StructArrays
-using Adapt
-
 struct GridNode{T}
     m::T                    # Mass
     p::SVector{3, T}        # Momentum

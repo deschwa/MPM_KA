@@ -1,7 +1,8 @@
-include("src/MPM_module.jl")
+include("../../src/MPM_module.jl")
 using .MPM
 using StaticArrays
 using LinearAlgebra
+using JLD2
 
 using Plots
 gr()
@@ -77,23 +78,23 @@ rho = 1000.0
 material, cache = NeoHookean_E_ν(1e6, 0.3, rho)
 
 R = 0.5  # Cylinder Radius (m)
-h = 0.2  # Cylinder Height (m)
-T = 2.0  # Rotation Period (s)
+h = 2.0  # Cylinder Height (m)
+T = 3.0  # Rotation Period (s)
 angular_velocity = 2π / T
 
 # Define Simulation Domain
-min_coords = SVector(-0.75, -0.75, -0.3)
-max_coords = SVector(0.75, 0.75, 0.3)
+min_coords = SVector(-0.75, -0.75, -1.25)
+max_coords = SVector(0.75, 0.75, 1.25)
 padding = 3
 
 
 # 1. Set a FIXED Grid Resolution (Physics Quality)
 # A 0.5m radius needs at least ~10-20 cells to look like a circle.
-grid_dx = R/5  # 10cm grid cells (Radius = 5 cells)
+grid_dx = R/10  # 10cm grid cells (Radius = 5 cells)
 
 # 2. Set Particle Density (Sampling Quality)
-# We want 8 particles per cell (2x2x2) for stability
-particles_per_cell_axis = 2 
+# We want 27 particles per cell (3x3x3) for stability
+particles_per_cell_axis = 2
 particle_spacing = grid_dx / particles_per_cell_axis # 0.025
 
 # 3. Generate Particles
@@ -109,16 +110,19 @@ grid = Grid(Array, N_vec, padding, min_coords, max_coords)
 println("Grid Size: $(N_vec) nodes.")
 
 
-sim = MPMSimulation(mp_group_tuple, grid, 5.0, 1e-3, QuadraticBSpline())
+sim = MPMSimulation(mp_group_tuple, grid, 10.0, 1e-3, QuadraticBSpline())
 
 savefig(plot_material_points(sim, title="Initial State", scheme=:velocity, color_limits=(-0.7, 0.7)), "initial_state.png")
 
 
 # Animation Setup
-fps = 30
+fps = 15
 next_frame_time = 0
 anim = Animation()
 
+
+# particle save configuration
+particle_filename(t) = "long_cylinder/mp_group_t=$(lpad((round(t, digits=4)), 4, '0')).jld2"
 
 # Angular momentum preparation
 angular_momenta = Float64[]
@@ -135,10 +139,12 @@ while sim.t < sim.total_time
         p = plot_material_points(sim, title="t=$(sim.t)", scheme=:velocity, color_limits=(-0.7, 0.7))
         frame(anim, p)
         display(p)
+
+        jldsave(particle_filename(sim.t), particles=sim.mp_groups[1], time=sim.t)
         global next_frame_time += 1/fps
     end
 
-    timestep!(sim, 1.0, 0.4)
+    timestep!(sim, 1.0, 0.5)
 
     push!(angular_momenta, calculate_angular_momentum(mp_group))
     push!(times, sim.t)

@@ -1,5 +1,3 @@
-using Plots
-using LinearAlgebra
 include("color_schemes.jl")
 
 

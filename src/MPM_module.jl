@@ -48,7 +48,7 @@ include("boundary_conditions/boundaries.jl")
 export fix_boundaries!
 
 include("solver/timestep.jl")
-export timestep!, p2g!, p2g_kernel!, g2p!, g2p_kernel!, grid_update!, grid_update_kernel!, stress_update!
+export timestep!, timestep_fixed_dt!, p2g!, p2g_kernel!, g2p!, g2p_kernel!, grid_update!, grid_update_kernel!, stress_update!
 export p2g_barrier!
 
 

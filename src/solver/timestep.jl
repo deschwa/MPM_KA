@@ -1,9 +1,3 @@
-using StaticArrays
-using LinearAlgebra
-using Base.Threads
-using Atomix
-
-
 """
 Compute the Courant condition based timestep
 Note: This runs on the host (CPU)
@@ -42,6 +36,46 @@ function timestep!(sim::MPMSimulation, alpha::T=1.0, courant_factor::T=0.3) wher
     shapefunction = sim.shape_function
     dt = courant_cond(sim, courant_factor)
     
+    # ============
+    # Reset Kernel
+    # ============
+    reset_grid!(grid)
+
+    # =================
+    # Particles to Grid
+    # =================
+    for mp_group in mp_groups
+        p2g!(mp_group, grid, shapefunction)
+    end
+
+    # ===========
+    # Grid Update
+    # ===========
+    grid_update!(grid, dt)
+
+    # ================
+    # Grid to Particle
+    # ================
+    for mp_group in mp_groups
+        g2p!(mp_group, grid, alpha, dt, shapefunction)
+    end
+
+    # ==============
+    # Stress Update
+    # ==============
+    for mp_group in mp_groups
+        stress_update!(mp_group, dt)
+    end
+
+    sim.t += dt
+end
+
+function timestep_fixed_dt!(sim::MPMSimulation, alpha::T=1.0) where {T}
+    mp_groups = sim.mp_groups
+    grid = sim.grid
+    shapefunction = sim.shape_function
+    dt = sim.dt
+        
     # ============
     # Reset Kernel
     # ============
@@ -287,7 +321,7 @@ end
     end
     mps.v[p_idx] = (1-α) * v_p_flip + α * v_p_apic
     mps.x[p_idx] = mp.x + mps.v[p_idx] * dt
-    mps.L[p_idx] = finalize_apic(shapefunction, B_p_new, inv_spacings)
+    mps.L[p_idx] = α * finalize_apic(shapefunction, B_p_new, inv_spacings) # Alpha to dampen L as well
     mps.F[p_idx] = (I_3(T) + mps.L[p_idx]*dt) * mp.F
 end
 
