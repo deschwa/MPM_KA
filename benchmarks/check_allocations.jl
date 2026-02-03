@@ -1,4 +1,4 @@
-include("../src/MPM_module.jl")
+include("../src/MPM.jl")
 using .MPM
 using BenchmarkTools
 using StructArrays

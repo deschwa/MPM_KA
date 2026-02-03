@@ -7,7 +7,7 @@ using StructArrays
 using KernelAbstractions
 using Adapt
 using Atomix
-using CUDA
+# using CUDA
 using Plots
 
 

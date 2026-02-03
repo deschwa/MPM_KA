@@ -1,4 +1,4 @@
-include("src/MPM_module.jl")
+include("src/MPM.jl")
 using .MPM
 using BenchmarkTools
 using StaticArrays
@@ -67,7 +67,7 @@ verify_allocations(local_mat, local_mps, local_dt)
 allocs = @allocated verify_allocations(local_mat, local_mps, local_dt)
 
 if allocs == 0
-    println("✅ SUCCESS: 0 Bytes allocated!")
+    println("SUCCESS: 0 Bytes allocated!")
 else
-    println("❌ Still allocating: $allocs bytes (Should be 0!)")
+    println("Still allocating: $allocs bytes (Should be 0!)")
 end

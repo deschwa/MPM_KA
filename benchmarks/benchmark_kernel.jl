@@ -1,13 +1,13 @@
-include("src/MPM_module.jl")
+include("src/MPM.jl")
 using .MPM
 using BenchmarkTools
 using StaticArrays
 using StructArrays
 using KernelAbstractions
 
-# ==========================================
-# 1. SETUP (Identical to check_allocations.jl)
-# ==========================================
+# ========
+# 1. SETUP
+# ========
 T = Float64
 N_particles = 100 
 
@@ -41,16 +41,16 @@ grd = sim.grid
 dt = sim.dt
 sf = sim.shape_function
 
-# ==========================================
+# ==========
 # 2. WARMUP
-# ==========================================
-println("🔥 Warming up kernels...")
+# =========
+println("Compiling kernels...")
 timestep!(sim) # Compiles all kernels once
-println("✅ Warmup complete.\n")
+println("Compilation complete.\n")
 
-# ==========================================
+# ====================
 # 3. KERNEL BENCHMARKS
-# ==========================================
+# ====================
 
 function check_kernel(name, func)
     println("---------------------------------------------------")
@@ -59,9 +59,9 @@ function check_kernel(name, func)
     # Check Allocations
     allocs = @allocated func()
     if allocs == 0
-        println("   💾 Allocations: 0 bytes (✅ PASS)")
+        println("Allocations: 0 bytes (PASS)")
     else
-        println("   💾 Allocations: $(Base.format_bytes(allocs)) (⚠️ FAIL)")
+        println("Allocations: $(Base.format_bytes(allocs)) (FAIL)")
     end
 
     # Check Speed
@@ -70,8 +70,8 @@ function check_kernel(name, func)
     
     min_time = minimum(bench).time / 1e6 # convert ns to ms
     med_time = median(bench).time / 1e6
-    println("   ⏱️  Time (min):  $(round(min_time, digits=4)) ms")
-    println("   ⏱️  Time (med):  $(round(med_time, digits=4)) ms")
+    println("Time (min):  $(round(min_time, digits=4)) ms")
+    println("Time (med):  $(round(med_time, digits=4)) ms")
 end
 
 function check_scaling()
@@ -100,9 +100,9 @@ function check_scaling()
     println("N=10000 Allocations: $(Base.format_bytes(alloc_large))")
     
     if alloc_large > alloc_small * 10
-        println("👉 VERDICT: Allocations scale with N. The leak is INSIDE the kernel loop.")
+        println("VERDICT: Allocations scale with N. The leak is INSIDE the kernel loop.")
     else
-        println("👉 VERDICT: Constant allocations. Likely fixed KernelAbstractions overhead.")
+        println("VERDICT: Constant allocations. Likely fixed KernelAbstractions overhead.")
     end
 end
 

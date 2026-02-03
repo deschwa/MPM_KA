@@ -5,7 +5,7 @@ using Plots
 using LaTeXStrings
 gr()
 
-include("../../src/MPM_module.jl")
+include("../../src/MPM.jl")
 using .MPM
 
 
