@@ -1,7 +1,6 @@
 struct GridNode{T}
     m::T                    # Mass
     p::SVector{3, T}        # Momentum
-    p_new::SVector{3, T}    # New Momentum
     f::SVector{3, T}        # Force
 end
 
@@ -46,9 +45,6 @@ function reset_grid!(grid::Grid)
     fill!(grid.state.p.x, zero(T))
     fill!(grid.state.p.y, zero(T))
     fill!(grid.state.p.z, zero(T))
-    fill!(grid.state.p_new.x, zero(T))
-    fill!(grid.state.p_new.y, zero(T))
-    fill!(grid.state.p_new.z, zero(T))
     fill!(grid.state.f.x, zero(T))
     fill!(grid.state.f.y, zero(T))
     fill!(grid.state.f.z, zero(T))
@@ -57,7 +53,6 @@ end
 function Base.zero(::Type{GridNode{T}}) where {T}
     return GridNode(
         zero(T),
-        zero(SVector{3, T}),
         zero(SVector{3, T}),
         zero(SVector{3, T})
     )

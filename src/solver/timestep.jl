@@ -30,7 +30,7 @@ end
 """
 Perform a single timestep of the MPM simulation
 """
-function timestep!(sim::MPMSimulation, alpha::T=1.0, courant_factor::T=0.3) where {T}
+function timestep!(sim::MPMSimulation, courant_factor::T=0.3) where {T}
     mp_groups = sim.mp_groups
     grid = sim.grid
     shapefunction = sim.shape_function
@@ -57,7 +57,7 @@ function timestep!(sim::MPMSimulation, alpha::T=1.0, courant_factor::T=0.3) wher
     # Grid to Particle
     # ================
     for mp_group in mp_groups
-        g2p!(mp_group, grid, alpha, dt, shapefunction)
+        g2p!(mp_group, grid, dt, shapefunction)
     end
 
     # ==============
@@ -70,7 +70,7 @@ function timestep!(sim::MPMSimulation, alpha::T=1.0, courant_factor::T=0.3) wher
     sim.t += dt
 end
 
-function timestep_fixed_dt!(sim::MPMSimulation, alpha::T=1.0) where {T}
+function timestep_fixed_dt!(sim::MPMSimulation)
     mp_groups = sim.mp_groups
     grid = sim.grid
     shapefunction = sim.shape_function
@@ -97,7 +97,7 @@ function timestep_fixed_dt!(sim::MPMSimulation, alpha::T=1.0) where {T}
     # Grid to Particle
     # ================
     for mp_group in mp_groups
-        g2p!(mp_group, grid, alpha, dt, shapefunction)
+        g2p!(mp_group, grid, dt, shapefunction)
     end
 
     # ==============
@@ -135,7 +135,7 @@ function p2g!(mp_group::MaterialPointGroup, grid::Grid, shapefunction=LinearHat(
     mps = mp_group.material_points
     grid_state = grid.state
 
-    backend = KernelAbstractions.get_backend(grid_state)
+    backend = KernelAbstractions.get_backend(grid_state.m)
 
     kernel = p2g_kernel!(backend)
 
@@ -223,7 +223,7 @@ end
 Grid Update host function
 """
 function grid_update!(grid::Grid, dt::T) where {T}
-    backend = KernelAbstractions.get_backend(grid.state)
+    backend = KernelAbstractions.get_backend(grid.state.m)
     
     kernel = grid_update_kernel!(backend)
 
@@ -237,13 +237,13 @@ end
 
     local_m = grid_state.m[I]
     if local_m > epsilon(T)
-        grid_state.p_new.x[I] = grid_state.p.x[I] + dt * grid_state.f.x[I]
-        grid_state.p_new.y[I] = grid_state.p.y[I] + dt * grid_state.f.y[I]
-        grid_state.p_new.z[I] = grid_state.p.z[I] + dt * grid_state.f.z[I]
+        grid_state.p.x[I] = grid_state.p.x[I] + dt * grid_state.f.x[I]
+        grid_state.p.y[I] = grid_state.p.y[I] + dt * grid_state.f.y[I]
+        grid_state.p.z[I] = grid_state.p.z[I] + dt * grid_state.f.z[I]
     else
-        grid_state.p_new.x[I] = zero(T)
-        grid_state.p_new.y[I] = zero(T)
-        grid_state.p_new.z[I] = zero(T)
+        grid_state.p.x[I] = zero(T)
+        grid_state.p.y[I] = zero(T)
+        grid_state.p.z[I] = zero(T)
     end
 end
 
@@ -254,24 +254,22 @@ end
 """
 Grid to Particles host function
 """
-function g2p!(mp_group::MaterialPointGroup, grid::Grid, α::T, dt::T, shapefunction::AbstractShapeFunction) where {T}
+function g2p!(mp_group::MaterialPointGroup, grid::Grid, dt::T, shapefunction::AbstractShapeFunction) where {T}
     mps = mp_group.material_points
     grid_state = grid.state
 
-    backend = KernelAbstractions.get_backend(grid_state)
+    backend = KernelAbstractions.get_backend(grid_state.m)    
 
     kernel = g2p_kernel!(backend)
 
-    kernel(grid_state, mps, grid.inv_spacings, grid.min_coords, grid.ghost_width,
-           α, dt, shapefunction; ndrange=mp_group.N)
+    kernel(grid_state, mps, grid.inv_spacings, grid.min_coords, grid.ghost_width, dt, shapefunction; ndrange=mp_group.N)
 
     KernelAbstractions.synchronize(backend)
 end
 
 # Grid to Particles kernel function
 @kernel function g2p_kernel!(grid_state, mps::StructVector{MP},
-                            inv_spacings::SVector{3,T}, min_coords::SVector{3,T}, ghost_width::Int,
-                            α::T, dt::T,
+                            inv_spacings::SVector{3,T}, min_coords::SVector{3,T}, ghost_width::Int, dt::T,
                             shapefunction::AbstractShapeFunction) where {T, MP<:MaterialPoint{T}}
 
     # Thread index
@@ -285,7 +283,6 @@ end
     i_offsets, j_offsets, k_offsets = get_support_offsets(shapefunction)
 
     v_p_apic = zero(SVector{3, T})
-    v_p_flip = mp.v
     B_p_new = zero(SMatrix{3,3,T,9})
 
     for di in i_offsets, dj in j_offsets, dk in k_offsets
@@ -310,18 +307,16 @@ end
 
         grid_mass = grid_state.m[i, j, k]
         if grid_mass > 1e-14
-            v_i = grid_state.p[i, j, k] / grid_state.m[i, j, k]
-            v_i_new = grid_state.p_new[i, j, k] / grid_state.m[i, j, k]
+            v_i_new = grid_state.p[i, j, k] / grid_state.m[i, j, k]
 
             v_p_apic = v_p_apic + N_Ip * v_i_new
-            v_p_flip = v_p_flip + N_Ip * (v_i_new - v_i)
 
             B_p_new = B_p_new + update_B_matrix(N_Ip, v_i_new, r_rel)
         end
     end
-    mps.v[p_idx] = (1-α) * v_p_flip + α * v_p_apic
+    mps.v[p_idx] = v_p_apic
     mps.x[p_idx] = mp.x + mps.v[p_idx] * dt
-    mps.L[p_idx] = α * finalize_apic(shapefunction, B_p_new, inv_spacings) # Alpha to dampen L as well
+    mps.L[p_idx] = finalize_apic(shapefunction, B_p_new, inv_spacings)
     mps.F[p_idx] = (I_3(T) + mps.L[p_idx]*dt) * mp.F
 end
 
@@ -354,7 +349,7 @@ function stress_update!(mp_group::MaterialPointGroup{<:Any, MT}, dt::T) where {M
     mps = mp_group.material_points
     material = mp_group.material
 
-    backend = KernelAbstractions.get_backend(mps)
+    backend = KernelAbstractions.get_backend(mps.m)
     kernel = stress_update_kernel!(backend)
     kernel(material, mps, dt; ndrange=mp_group.N)
 
