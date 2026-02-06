@@ -43,7 +43,7 @@ Ny = Nx
 dx = domain_width / (Nx - 1)
 Nz = ceil(Int, domain_height / dx)
 Ns = SVector{3}(Nx, Ny, Nz)
-dt_list = [0.01, 0.005, 0.001, 0.0005]
+dt_list = [0.0005, 0.001, 0.0025, 0.005, 0.0075, 0.01]
 
 
 """
@@ -97,7 +97,7 @@ plot!(p1, t_analytical, h_analytical_arr, label="Analytical Solution", lw=2, ls=
 for dt in dt_list
     plot!(p1, t_arr_dict[dt], h_arr_dict[dt], label="dt = $(dt)s", lw=2)
 end
-savefig(p1, "falling_MP_height_over_time.png_dt")
+savefig(p1, "falling_MP_height_over_time.png")
 
 
 p2 = plot(title="Logarithmic Error over Time - dt Dependence", xlabel="Time [s]", ylabel="Logarithmic Error", legend=:topright)
@@ -105,3 +105,10 @@ for dt in dt_list
     plot!(p2, t_arr_dict[dt], logerror_arr_dict[dt], label="dt = $(dt)s", lw=2)
 end
 savefig(p2, "falling_MP_log_error_over_time_dt.png")   
+
+
+
+# COnvergence rate
+final_logerrors = [logerror_arr_dict[dt][end] for dt in dt_list]
+p3 = scatter(dt_list, final_logerrors, xscale=:log10, xticks = (dt_list, string.(dt_list)), title="Convergence Rate of the Euler Integrator", xlabel="Time Step Size [s]", ylabel="Final Logarithmic Error", legend=false, marker=:o)
+savefig(p3, "falling_MP_convergence_rate.png")

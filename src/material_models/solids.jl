@@ -1,20 +1,36 @@
-# -----------
-# Rigid Solid
-# -----------
-@kernel function stress_update_kernel!(material::RigidSolid, mps, dt::T) where {T}
-    p_idx = @index(Global, Linear)
+"""
+Linear Elastic Isotropic Material
+"""
+struct LinearElastic{T}<:AbstractMaterial
+    E::T        # Young's Modulus
+    ν::T        # Poisson's Ratio
 
-    mps.σ[p_idx] = zero(SMatrix{3,3,T,9})
+    λ::T        # Lame's First Parameter
+    μ::T        # Lame's Second Parameter
+
+    ρ::T        # Density
+
+    c::T        # soundspeed
 end
 
-function soundspeed(material::RigidSolid)
-    return 0
+
+function LinearElastic_E_ν(E::T, ν::T, ρ::T) where {T}
+    λ = (E * ν) / ((1 + ν) * (1 - 2 * ν))
+    μ = E / (2 * (1 + ν))
+    c = sqrt(E/ρ)
+    return LinearElastic{T}(E, ν, λ, μ, ρ, c), NoMaterialCache()
+end
+function LinearElastic_λ_ν(λ::T, ν::T, ρ::T) where {T}
+    E = λ * (1 + ν) * (1 - 2 * ν) / ν
+    μ = E / (2 * (1 + ν))
+    c = sqrt(E/ρ)
+    return LinearElastic{T}(E, ν, λ, μ, ρ, c), NoMaterialCache()
 end
 
+function max_speed(material::LinearElastic{T}, mps, p_idx) where {T}
+    return norm(mps.v[p_idx]) + material.c
+end
 
-# --------------------
-# Neo-Hookean Material
-# --------------------
 @kernel function stress_update_kernel!(material::NeoHookean{T}, mps::StructVector{MP}, dt::T) where {T, MP<:MaterialPoint{T}}
     p_idx = @index(Global, Linear)
     
@@ -27,25 +43,44 @@ end
 end
 
 @inline function barrier_neohookean(F::SMatrix{3,3,T,9}, λ::T, μ::T)::SMatrix{3,3,T,9} where {T}
-    J = det(F)
-    J = max(J, epsilon(T))
-    
-    # Force the math to stay in SMatrix world
-    # (F * F') is usually safe, but let's be 100% explicit
-    FFt = F * F' 
+    J = det(F)::Float64
+    J = max(J, eps(T))
 
-    σ_new = (μ / J) * (FFt - I_3(T)) + (λ * log(J) / J) * I_3(T)
+    σ_new = (μ / J) * (F * F'  - I_3(T)) + (λ * log(J) / J) * I_3(T)
     
     return σ_new
 end
 
-function soundspeed(material::NeoHookean{T}) where {T}
-    return sqrt(material.E / material.ρ)
+
+
+
+"""
+NeoHookean Material
+"""
+struct NeoHookean{T}<:AbstractMaterial
+    E::T        # Young's Modulus
+    ν::T        # Poisson's Ratio
+
+    μ::T        # Lame's First Parameter
+    λ::T        # Lame's Second Parameter
+
+    ρ::T        # Density
+
+    c::T        # Soundspeed
 end
 
-# ---------------------------------
-# Linear Elastic Isotropic Material
-# ---------------------------------
+function NeoHookean(E::T, ν::T, ρ::T) where {T}
+    λ = (E * ν) / ((1 + ν) * (1 - 2 * ν))
+    μ = E / (2 * (1 + ν))
+    c = sqrt(E/ρ)
+    return NeoHookean{T}(E, ν, μ, λ, ρ, c), NoMaterialCache()
+end
+
+function max_speed(material::NeoHookean{T}, mps, p_idx) where {T}
+    return norm(mps.v[p_idx]) + material.c
+end
+
+
 @kernel function stress_update_kernel!(material::LinearElastic{T}, mps, dt::T) where {T}
     p_idx = @index(Global, Linear)
 
@@ -63,8 +98,6 @@ end
     mps.σ[p_idx] = σ_new
 end
 
-function soundspeed(material::LinearElastic{T}) where {T}
-    return sqrt(material.E / material.ρ)
-end
+
 
 

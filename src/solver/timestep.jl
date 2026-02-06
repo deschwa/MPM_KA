@@ -1,29 +1,27 @@
 """
 Compute the Courant condition based timestep
-Note: This runs on the host (CPU)
 """
 function courant_cond(sim::MPMSimulation, courant_factor::T=0.4) where {T}
     mp_groups = sim.mp_groups
 
     spacing = one(T) / maximum(sim.grid.inv_spacings)
 
-    max_soundspeed = zero(T)
-    max_v = zero(T)
+    max_total_v = zero(T)
+
     for mp_group in mp_groups
-        # v_vec = mp_group.material_points.v
-        v_temp = maximum(norm, Array(mp_group.material_points.v))
+        mps = mp_group.material_points
+        material = mp_group.material
 
-        soundspeed_temp = soundspeed(mp_group.material)
-        if soundspeed_temp > max_soundspeed
-            max_soundspeed = soundspeed_temp
-        end
+        group_max = mapreduce(
+            idx -> max_speed(material, mps, idx), 
+            max, 
+            1:length(mps)
+        )
 
-        if v_temp > max_v
-            max_v = v_temp
-        end
+        max_total_v = max(max_total_v, group_max)
     end
 
-    return min(courant_factor * spacing / (max_soundspeed + max_v), sim.dt)
+    return min(courant_factor * spacing / max_total_v, sim.dt)
 end
 
 
