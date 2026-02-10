@@ -63,7 +63,7 @@ println("Simulation parameters set: n=$n, γ=$γ, K=$K, ν=$ν, R=$R, t_end=$t_e
 
 
 # Generate Grid
-# Grid should have 10 cells per radius
+# Grid should have 20 cells per radius
 dx_grid = R / 10
 min_coords = SVector{3,Float64}(-R, -R, -R) * 2
 max_coords = SVector{3,Float64}(R, R, R) * 2
@@ -77,7 +77,7 @@ mat_cache = IsentropicGasCache(0.0)
 
 
 # Generate Material Points
-N_radius = ceil(Int, R / dx_grid) + 1
+N_radius = 2 * ceil(Int, R / dx_grid) + 1
 M_tot = 1.0
 
 mp_group = generate_sphere(R, N_radius, M_tot, material, mat_cache)
@@ -107,7 +107,7 @@ function get_densities(mp_group)
     end
     return rs, densities
 end
-
+calculated_steps = 0
 
 
 # Run Simulation
@@ -121,6 +121,9 @@ while sim.t < sim.total_time
     #     s = scatter(rs, densities, xlabel="Radius", ylabel="Density", title="Density vs Radius at t=$(round(sim.t, digits=2))", label="")
     #     frame(anim_density, s)
     # end
+    if calculated_steps % 100 == 0
+        print("Time: $(round(sim.t, digits=2)) / $(sim.total_time)        \r")
+    end
 end
 
 # gif(anim_density, "density_vs_radius.gif", fps=10)
