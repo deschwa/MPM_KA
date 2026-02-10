@@ -20,11 +20,11 @@ using Plots
 
 
 
+"""
+Core
+"""
 
 include("core/abstract_types.jl")
-export LinearElastic, LinearElastic_E_ν, LinearElastic_λ_ν
-export NeoHookean, NeoHookean_E_ν, NeoHookean_λ_ν
-
 export AbstractMaterial, AbstractMaterialCache
 export AbstractShapeFunction, LinearHat, QuadraticBSpline
 
@@ -41,16 +41,41 @@ export MPMSimulation
 include("interpolation/shapefunctions.jl")
 export shape_function, get_grid_position, get_support_base, get_support_offsets
 
+
+"""
+Material Models
+"""
+
 include("material_models/solids.jl")
-export stress_update_kernel!, soundspeed
+export NeoHookean, LinearElastic, NoMaterialCache
+
+include("material_models/gases.jl")
+export GammaLawGas, GammaLawGasCache, IsentropicGas, IsentropicGasCache
+
+export stress_update_kernel!
+
+
+"""
+Boundary Conditions
+"""
 
 include("boundary_conditions/boundaries.jl")
 export fix_boundaries!
+export NoBoundaryCondition, NoSlipBoundary, FreeSlipBoundary
+
+
+"""
+Solver
+"""
 
 include("solver/timestep.jl")
 export timestep!, timestep_fixed_dt!, p2g!, p2g_kernel!, g2p!, g2p_kernel!, grid_update!, grid_update_kernel!, stress_update!
 export p2g_barrier!
 
+
+"""
+Misc
+"""
 
 include("benchmark_utils/generate_test_setups.jl")
 export random_particle_sim, get_quantities

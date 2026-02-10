@@ -40,7 +40,8 @@ end
 
 function MaterialPointGroup(::Type{ArrayType}, MPList::Vector{<:MaterialPoint}, material::mat, label::String) where {ArrayType<:AbstractArray, mat<:AbstractMaterial}
     N = length(MPList)
-    MP_structarray = StructArray(MPList)
+    MP_structarray = StructArray(MPList, 
+                                unwrap = t -> t <: AbstractMaterialCache)
 
     MP_structarray = StructArrays.replace_storage(ArrayType, MP_structarray)
     return MaterialPointGroup(N, MP_structarray, material, label)

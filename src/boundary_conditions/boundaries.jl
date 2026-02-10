@@ -1,10 +1,11 @@
+struct NoSlipBoundary <: AbstractBoundaryCondition end
 function fix_boundaries!(::NoSlipBoundary, sim::MPMSimulation)
     grid = sim.grid
     v = grid.state.v  # Zugriff beschleunigen
     Nx, Ny, Nz = size(v)
     p = grid.ghost_width
     T = eltype(v)
-
+    
     # Ganze Padding-Blöcke auf Null setzen
     @views v[1:p, :, :]          .= zero(T)     # x=0
     @views v[(Nx-p+1):Nx, :, :]  .= zero(T)     # x=Nx
@@ -17,6 +18,7 @@ function fix_boundaries!(::NoSlipBoundary, sim::MPMSimulation)
 end
 
 
+struct FreeSlipBoundary <: AbstractBoundaryCondition end
 function fix_boundaries!(::FreeSlipBoundary, sim::MPMSimulation)
     grid = sim.grid
     v = grid.state.v  # Zugriff beschleunigen
@@ -38,4 +40,11 @@ function fix_boundaries!(::FreeSlipBoundary, sim::MPMSimulation)
     @views v.z[:, :, 1:p] .= max(zero_T, v.z[:, :, 1:p])
 
     @views v.z[:, :, (Nz-p+1):Nz] .= min(zero_T, v.z[:, :, (Nz-p+1):Nz])
+end
+
+
+
+struct NoBoundaryCondition <: AbstractBoundaryCondition end # Should never be used in practice!
+function fix_boundaries!(::NoBoundaryCondition, sim::MPMSimulation)
+    
 end

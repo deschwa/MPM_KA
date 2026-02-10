@@ -29,7 +29,7 @@ end
 
     p_p = - (γ - 1) * rho_p * e_p
 
-    σ_p = p_p * one(SMatrix{3,3,T,9})
+    σ_p = - p_p * one(SMatrix{3,3,T,9})
 
     D_p = T(0.5) * (L_p + L_p')
     trD_p = tr(D_p)
@@ -70,11 +70,11 @@ end
     
     γ = material.γ
     rho_p = mps.m[p_idx] / (mps.volume_0[p_idx] * det(mps.F[p_idx]))
-    K_p = mps.mat_cache.K[p_idx]
+    K_p = material.K
 
     p_p = K_p * rho_p ^ γ
 
-    σ_p = p_p * one(SMatrix{3,3,T,9})
+    σ_p = - p_p * one(SMatrix{3,3,T,9})
 
     mps.σ[p_idx] = σ_p
     mps.mat_cache.p[p_idx] = p_p
